@@ -151,6 +151,7 @@ void debug_dump(uint32_t i, zval *item);
 void debug_dump(uint32_t i, PyObject *pObj);
 void var_dump(zval *var);
 void debug_var_dump(zval *var);
+void debug_print_refcnt(const char *fn, PyObject *zv);
 
 bool py_module_string_init(PyObject *m);
 bool py_module_object_init(PyObject *m);
@@ -284,7 +285,7 @@ static inline zval *array_get(zval *zv, long index) {
     return zend_hash_index_find(Z_ARR_P(zv), index);
 }
 /**
- * Return value: Borrowed reference.
+ * Return value: Borrowed reference. If not exist, returns null pointer
  */
 static inline zval *array_get(zval *zv, const char *key, size_t l_key) {
     return zend_hash_str_find(Z_ARR_P(zv), key, l_key);
@@ -379,4 +380,10 @@ void string2zval(PyObject *pv, zval *zv);
 void tuple2argv(zval *argv, PyObject *args, ssize_t size, int begin = 1);
 void release_argv(uint32_t argc, zval *argv);
 }  // namespace python
+struct Options {
+    bool numeric_as_object;
+    bool display_exception;
+};
 }  // namespace phpy
+
+extern phpy::Options phpy_options;
