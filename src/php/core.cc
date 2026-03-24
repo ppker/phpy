@@ -44,6 +44,7 @@ static long eval_code_id = 0;
 using phpy::CallObject;
 using phpy::php::arg_1;
 using phpy::php::arg_2;
+using phpy::python::LockGuard;
 
 phpy::Options phpy_options;
 
@@ -54,6 +55,7 @@ ZEND_METHOD(PyCore, import) {
     Z_PARAM_STRING(module, l_module)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
+    LOCK_GIL();
     PyObject *m = PyImport_ImportModule(module);
     if (m == NULL) {
         phpy::php::throw_error_if_occurred();
@@ -74,6 +76,7 @@ ZEND_METHOD(PyCore, eval) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     std::string module_name = "eval_code_" + std::to_string(eval_code_id++);
+    LOCK_GIL();
     PyObject *module = PyModule_New(module_name.c_str());
     if (module == NULL) {
         phpy::php::throw_error_if_occurred();
@@ -106,6 +109,7 @@ ZEND_METHOD(PyCore, eval) {
 }
 
 ZEND_METHOD(PyCore, next) {
+	LOCK_GIL();
     auto iter = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU, phpy_iter_get_ce());
     CHECK_ARG(iter);
     auto next = PyIter_Next(iter);
@@ -122,6 +126,7 @@ ZEND_METHOD(PyCore, int) {
     Z_PARAM_ZVAL(zv)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     phpy::php::new_object_no_addref(return_value, long2long(zv));
 }
 
@@ -133,6 +138,7 @@ ZEND_METHOD(PyCore, object) {
     Z_PARAM_ZVAL(zv)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     if (zv == NULL || ZVAL_IS_NULL(zv)) {
         phpy::php::call_builtin_fn(ZEND_STRL("object"), nullptr, return_value);
     } else {
@@ -147,6 +153,7 @@ ZEND_METHOD(PyCore, float) {
     Z_PARAM_ZVAL(zv)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     phpy::php::new_object_no_addref(return_value, PyFloat_FromDouble(zval_get_double(zv)));
 }
 
@@ -157,14 +164,17 @@ ZEND_METHOD(PyCore, fn) {
     Z_PARAM_ZVAL(zv)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     PyObject *pv = phpy::python::new_callable(zv);
     phpy::php::new_fn(return_value, pv);
     Py_DECREF(pv);
 }
 
 ZEND_METHOD(PyCore, scalar) {
+    LOCK_GIL();
     auto pyobj = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU, phpy_object_get_ce());
     CHECK_ARG(pyobj);
+
     py2php_scalar(pyobj, return_value);
     Py_DECREF(pyobj);
 }
@@ -373,6 +383,7 @@ PHP_RSHUTDOWN_FUNCTION(phpy) {
 
 BEGIN_EXTERN_C()
 const char *phpy_get_python_version(void) {
+	LOCK_GIL();
     return Py_GetVersion();
 }
 END_EXTERN_C()
@@ -387,6 +398,7 @@ ZEND_METHOD(PyCore, __callStatic) {
     Z_PARAM_ARRAY(arguments)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
+    LOCK_GIL();
     phpy::php::call_builtin_fn(name, l_name, arguments, return_value);
 }
 
@@ -398,6 +410,7 @@ ZEND_METHOD(PyCore, bytes) {
     Z_PARAM_ZVAL(zv)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     PyObject *pv;
     if (phpy::php::is_null(zv)) {
         pv = PyBytes_FromStringAndSize("", 0);
@@ -478,6 +491,7 @@ ZEND_METHOD(PyCore, raise) {
     Z_PARAM_ZVAL(zvalue)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     if (zvalue) {
         if (Z_TYPE_P(zvalue) == IS_OBJECT && phpy::php::is_pyobject(zvalue)) {
             PyErr_SetObject(phpy_object_get_handle(ztype), phpy_object_get_handle(zvalue));

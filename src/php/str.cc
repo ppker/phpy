@@ -22,6 +22,7 @@ BEGIN_EXTERN_C()
 END_EXTERN_C()
 
 zend_class_entry *PyStr_ce;
+using phpy::python::LockGuard;
 
 namespace phpy {
 namespace php {
@@ -46,6 +47,7 @@ ZEND_METHOD(PyStr, __construct) {
     Z_PARAM_ZVAL(zstr)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
+    LOCK_GIL();
     if (Z_TYPE_P(zstr) == IS_OBJECT && instanceof_function(Z_OBJCE_P(zstr), phpy_object_get_ce())) {
         PyObject *pyobj = phpy_object_get_handle(zstr);
         PyObject *pStr = PyUnicode_FromObject(pyobj);

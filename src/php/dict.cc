@@ -40,6 +40,7 @@ void new_dict(zval *zv, PyObject *dict) {
 }  // namespace phpy
 
 using phpy::php::arg_1;
+using phpy::python::LockGuard;
 
 zend_class_entry *phpy_dict_get_ce() {
     return PyDict_ce;
@@ -53,6 +54,7 @@ ZEND_METHOD(PyDict, __construct) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     PyObject *pdict;
+    LOCK_GIL();
     if (phpy::php::is_null(zdict) || phpy::php::is_empty_array(zdict)) {
         pdict = PyDict_New();
     } else if (phpy::php::is_array(zdict)) {
@@ -65,6 +67,7 @@ ZEND_METHOD(PyDict, __construct) {
 }
 
 ZEND_METHOD(PyDict, offsetGet) {
+	LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
     ON_SCOPE_EXIT {
@@ -88,6 +91,7 @@ ZEND_METHOD(PyDict, offsetSet) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     PyObject *pv = php2py(zv);
     PyObject *pk = php2py(zk);
     auto value = PyDict_SetItem(object, pk, pv);
@@ -99,6 +103,7 @@ ZEND_METHOD(PyDict, offsetSet) {
 }
 
 ZEND_METHOD(PyDict, offsetUnset) {
+	LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
     PyDict_DelItem(object, pk);
@@ -106,6 +111,7 @@ ZEND_METHOD(PyDict, offsetUnset) {
 }
 
 ZEND_METHOD(PyDict, offsetExists) {
+	LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
     RETVAL_BOOL(PyDict_Contains(object, pk));
@@ -118,6 +124,7 @@ ZEND_METHOD(PyDict, key) {
         return;
     }
     zval key_zv;
+    LOCK_GIL();
     py2php(current, &key_zv);
     if (Z_TYPE(key_zv) == IS_LONG || Z_TYPE(key_zv) == IS_STRING) {
         RETURN_ZVAL(&key_zv, 0, 0);
@@ -133,6 +140,7 @@ ZEND_METHOD(PyDict, current) {
     if (current == NULL) {
         return;
     }
+    LOCK_GIL();
     auto value = PyDict_GetItem(object, current);
     if (value != NULL) {
         py2php(value, return_value);
@@ -141,5 +149,6 @@ ZEND_METHOD(PyDict, current) {
 
 ZEND_METHOD(PyDict, count) {
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     RETURN_LONG(PyDict_Size(object));
 }

@@ -24,6 +24,7 @@ END_EXTERN_C()
 zend_class_entry *PyTuple_ce;
 
 using phpy::php::arg_1;
+using phpy::python::LockGuard;
 
 int php_class_tuple_init(INIT_FUNC_ARGS) {
     zend_class_entry ce;
@@ -58,6 +59,7 @@ ZEND_METHOD(PyTuple, __construct) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     PyObject *ptuple;
+    LOCK_GIL();
     if (phpy::php::is_null(ztuple) || phpy::php::is_empty_array(ztuple)) {
         ptuple = PyTuple_New(0);
     } else if (phpy::php::is_array(ztuple)) {
@@ -74,6 +76,7 @@ ZEND_METHOD(PyTuple, __construct) {
 ZEND_METHOD(PyTuple, offsetGet) {
     auto pk = get_key(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     if (PyTuple_Size(object) <= pk) {
         zend_throw_error(NULL, "PyTuple: index[%ld] out of range", pk);
         return;
@@ -97,5 +100,6 @@ ZEND_METHOD(PyTuple, offsetUnset) {
 ZEND_METHOD(PyTuple, offsetExists) {
     auto pk = get_key(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     RETVAL_BOOL(pk >= 0 && PyTuple_Size(object) > pk);
 }

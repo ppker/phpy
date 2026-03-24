@@ -26,6 +26,11 @@ PHP_ARG_ENABLE([code-coverage],
   [whether to enable code coverage support],
   [AS_HELP_STRING([--enable-code-coverage],
     [Enable code coverage support])], [no], [no])
+    
+PHP_ARG_ENABLE([python-gil],
+  [Whether to enable python multithreading support],
+  [AS_HELP_STRING([--enable-python-gil],
+    [Enable python multithreading support])], [no], [no])
 
 AC_DEFUN([GET_PYTHON_LDFLAGS], [
   TMP_RESULT="$($PHP_PYTHON_CONFIG --embed --ldflags)"
@@ -97,6 +102,10 @@ if test "$PHP_PHPY" != "no"; then
     EXTRA_LDFLAGS="--coverage"
   else
     AC_MSG_RESULT([disabled])
+  fi
+  
+  if test "$PHP_PYTHON_GIL" != "no"; then
+    AC_DEFINE(PHPY_ENABLE_GIL, 1, [enable python multithreading support])
   fi
 
   if test -f "$abs_srcdir/phpy.cc"; then

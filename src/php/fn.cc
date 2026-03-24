@@ -21,6 +21,7 @@ BEGIN_EXTERN_C()
 #include "stubs/phpy_fn_arginfo.h"
 END_EXTERN_C()
 
+using phpy::python::LockGuard;
 zend_class_entry *PyFn_ce;
 
 namespace phpy {
@@ -46,6 +47,7 @@ ZEND_METHOD(PyFn, __construct) {
     Z_PARAM_ZVAL(zfn)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
+    LOCK_GIL();
     PyObject *pv = phpy::python::new_callable(zfn);
     phpy_object_ctor(ZEND_THIS, pv);
 }

@@ -24,6 +24,7 @@ END_EXTERN_C()
 zend_class_entry *PySet_ce;
 
 using phpy::php::arg_1;
+using phpy::python::LockGuard;
 
 int php_class_set_init(INIT_FUNC_ARGS) {
     zend_class_entry ce;
@@ -49,6 +50,7 @@ ZEND_METHOD(PySet, __construct) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     PyObject *pset;
+    LOCK_GIL();
     if (phpy::php::is_null(zset) || phpy::php::is_empty_array(zset)) {
         pset = PySet_New(0);
     } else if (phpy::php::is_array(zset)) {
@@ -62,11 +64,13 @@ ZEND_METHOD(PySet, __construct) {
 
 ZEND_METHOD(PySet, count) {
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     RETURN_LONG(PySet_Size(object));
 }
 
 ZEND_METHOD(PySet, contains) {
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     RETURN_BOOL(PySet_Contains(object, pk));
 }

@@ -24,6 +24,7 @@ END_EXTERN_C()
 zend_class_entry *PyList_ce;
 
 using phpy::php::arg_1;
+using phpy::python::LockGuard;
 
 int php_class_list_init(INIT_FUNC_ARGS) {
     zend_class_entry ce;
@@ -58,6 +59,7 @@ ZEND_METHOD(PyList, __construct) {
     Z_PARAM_ZVAL(zlist)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
+    LOCK_GIL();
     PyObject *plist;
     if (phpy::php::is_null(zlist) || phpy::php::is_empty_array(zlist)) {
         plist = PyList_New(0);
@@ -73,6 +75,7 @@ ZEND_METHOD(PyList, __construct) {
 ZEND_METHOD(PyList, offsetGet) {
     auto pk = get_key(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     if (PyList_Size(object) <= pk) {
         zend_throw_error(NULL, "PyList: index[%ld] out of range", pk);
         return;
@@ -95,6 +98,7 @@ ZEND_METHOD(PyList, offsetSet) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     PyObject *pv = php2py(zv);
     int result;
     if (zk == NULL || ZVAL_IS_NULL(zk)) {
@@ -118,5 +122,6 @@ ZEND_METHOD(PyList, offsetUnset) {
 ZEND_METHOD(PyList, offsetExists) {
     auto pk = get_key(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     RETVAL_BOOL(PyList_Size(object) > pk);
 }

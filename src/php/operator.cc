@@ -18,6 +18,7 @@
 #include "phpy.h"
 
 using namespace phpy::php;
+using phpy::python::LockGuard;
 
 #define GET_OP_VAR(n, v)                                                                                               \
     if (opline->op##n##_type == IS_CONST) {                                                                            \
@@ -45,6 +46,7 @@ static int opcode_handler_number_op(NumberProtocolFn fn, zend_execute_data *exec
     GET_OP_VAR(2, right);
 
     PyObject *result = nullptr;
+    LOCK_GIL();
 
     if (Z_TYPE_P(left) == IS_OBJECT && is_pyobject(left)) {
         PyObject *obj = phpy_object_get_handle(left);
@@ -61,7 +63,7 @@ static int opcode_handler_number_op(NumberProtocolFn fn, zend_execute_data *exec
     // The `result` must be a new reference.
     if (result) {
         if (result == Py_None) {
-        	throw_error_if_occurred();
+            throw_error_if_occurred();
             Py_DECREF(result);
             ZVAL_NULL(EX_VAR(opline->result.var));
         } else {
@@ -82,6 +84,7 @@ static int opcode_handler_compare_op(int op, zend_execute_data *execute_data) {
     GET_OP_VAR(1, left);
     GET_OP_VAR(2, right);
 
+    LOCK_GIL();
     bool is_pyobj = false;
     int result;
 
@@ -101,7 +104,7 @@ static int opcode_handler_compare_op(int op, zend_execute_data *execute_data) {
 
     if (is_pyobj) {
         if (result == -1) {
-        	throw_error_if_occurred();
+            throw_error_if_occurred();
             ZVAL_NULL(EX_VAR(opline->result.var));
         } else {
             ZVAL_BOOL(EX_VAR(opline->result.var), result == 1);
@@ -182,6 +185,7 @@ static int opcode_handler_assign_op(zend_execute_data *execute_data) {
     const zend_op *opline = EX(opline);
     zval *left;
     GET_OP_VAR(1, left);
+    LOCK_GIL();
 
     if (Z_TYPE_P(left) == IS_OBJECT && is_pyobject(left)) {
         // See: zend_binary_op
@@ -239,7 +243,7 @@ static int opcode_handler_assign_op(zend_execute_data *execute_data) {
         FREE_OP_VAR(2, right);
 
         if (result == nullptr || result == Py_None) {
-        	throw_error_if_occurred();
+            throw_error_if_occurred();
         }
         if (UNEXPECTED(RETURN_VALUE_USED(opline))) {
             ZVAL_COPY(EX_VAR(opline->result.var), left);
@@ -254,12 +258,13 @@ static int opcode_handler_bitwise_not(zend_execute_data *execute_data) {
     const zend_op *opline = EX(opline);
     zval *left;
     GET_OP_VAR(1, left);
+    LOCK_GIL();
 
     if (Z_TYPE_P(left) == IS_OBJECT && is_pyobject(left)) {
         PyObject *obj = phpy_object_get_handle(left);
         PyObject *result = PyNumber_Invert(obj);
         if (result == Py_None) {
-        	throw_error_if_occurred();
+            throw_error_if_occurred();
             Py_DECREF(result);
             ZVAL_NULL(EX_VAR(opline->result.var));
         } else {

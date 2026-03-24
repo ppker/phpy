@@ -24,6 +24,7 @@ END_EXTERN_C()
 zend_class_entry *PySequence_ce;
 
 using phpy::php::arg_1;
+using phpy::python::LockGuard;
 
 int php_class_sequence_init(INIT_FUNC_ARGS) {
     zend_class_entry ce;
@@ -39,11 +40,13 @@ zend_class_entry *phpy_sequence_get_ce() {
 
 ZEND_METHOD(PySequence, count) {
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     RETURN_LONG(PySequence_Size(object));
 }
 
 ZEND_METHOD(PySequence, contains) {
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     auto pv = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     RETURN_BOOL(PySequence_Contains(object, pv));
 }
@@ -57,5 +60,6 @@ ZEND_METHOD(PySequence, slice) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     py2php(PySequence_GetSlice(object, v1, v2), return_value);
 }

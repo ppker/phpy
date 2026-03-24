@@ -17,6 +17,10 @@
 
 #pragma once
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
@@ -418,6 +422,37 @@ void string2zval(PyObject *pv, zval *zv);
 void tuple2argv(zval *argv, PyObject *args, ssize_t size, int begin = 1);
 void release_argv(uint32_t argc, zval *argv);
 bool contains(PyObject *obj, PyObject *key);
+
+class LockGuard {
+  public:
+    LockGuard() : state_(PyGILState_Ensure()), released_(false) {}
+
+    ~LockGuard() {
+        if (!released_) {
+            PyGILState_Release(state_);
+        }
+    }
+
+    void release() {
+        if (!released_) {
+            PyGILState_Release(state_);
+            released_ = true;
+        }
+    }
+
+    LockGuard(const LockGuard &) = delete;
+    LockGuard &operator=(const LockGuard &) = delete;
+
+  private:
+    PyGILState_STATE state_;
+    bool released_;
+};
+
+#if PHPY_ENABLE_GIL
+#define LOCK_GIL() LockGuard gil
+#else
+#define LOCK_GIL()
+#endif
 }  // namespace python
 struct Options {
     bool numeric_as_object;

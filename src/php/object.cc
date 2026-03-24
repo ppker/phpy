@@ -24,6 +24,7 @@ BEGIN_EXTERN_C()
 END_EXTERN_C()
 
 using phpy::CallObject;
+using phpy::python::LockGuard;
 
 zend_class_entry *PyObject_ce;
 static zend_object_handlers object_handlers;
@@ -220,6 +221,7 @@ ZEND_METHOD(PyObject, __construct) {
     Z_PARAM_ZVAL(zv)
     ZEND_PARSE_PARAMETERS_END_EX(return );
 
+    LOCK_GIL();
     if (zv == NULL) {
         phpy_object_get_object(ZEND_THIS)->object = Py_None;
         Py_INCREF(Py_None);
@@ -239,6 +241,7 @@ ZEND_METHOD(PyObject, __call) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     auto fn = PyObject_GetAttrString(object, name);
     if (!fn || !PyCallable_Check(fn)) {
         phpy::php::throw_error_if_occurred();
@@ -258,6 +261,7 @@ ZEND_METHOD(PyObject, __get) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     auto value = PyObject_GetAttrString(object, name);
     if (value != NULL) {
         py2php(value, return_value);
@@ -278,6 +282,7 @@ ZEND_METHOD(PyObject, __set) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     auto value = PyObject_SetAttrString(object, name, php2py(zvalue));
     if (value < 0) {
         phpy::php::throw_error_if_occurred();
@@ -285,6 +290,7 @@ ZEND_METHOD(PyObject, __set) {
 }
 
 ZEND_METHOD(PyObject, __toString) {
+	LOCK_GIL();
     phpy::python::string2zval(phpy_object_get_handle(ZEND_THIS), return_value);
 }
 
@@ -299,6 +305,7 @@ ZEND_METHOD(PyObject, __invoke) {
     ZEND_PARSE_PARAMETERS_END();
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     if (!object || !PyCallable_Check(object)) {
         phpy::php::throw_error_if_occurred();
         return;
@@ -309,18 +316,22 @@ ZEND_METHOD(PyObject, __invoke) {
 }
 
 ZEND_METHOD(PyObject, rewind) {
+	LOCK_GIL();
     phpy_object_iterator_reset(ZEND_THIS);
 }
 
 ZEND_METHOD(PyObject, next) {
+	LOCK_GIL();
     phpy_object_iterator_next(ZEND_THIS);
 }
 
 ZEND_METHOD(PyObject, valid) {
+	LOCK_GIL();
     RETURN_BOOL(phpy_object_iterator_valid(ZEND_THIS));
 }
 
 ZEND_METHOD(PyObject, key) {
+	LOCK_GIL();
     RETURN_LONG(phpy_object_iterator_index(ZEND_THIS));
 }
 
@@ -329,15 +340,18 @@ ZEND_METHOD(PyObject, current) {
     if (current == NULL) {
         return;
     }
+    LOCK_GIL();
     py2php(current, return_value);
 }
 
 ZEND_METHOD(PyObject, count) {
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     RETURN_LONG(PyObject_Size(object));
 }
 
 ZEND_METHOD(PyObject, offsetGet) {
+	LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
     /**
@@ -364,6 +378,7 @@ ZEND_METHOD(PyObject, offsetSet) {
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     auto object = phpy_object_get_handle(ZEND_THIS);
+    LOCK_GIL();
     PyObject *pv = php2py(zv);
     PyObject *pk = php2py(zk);
     /**
@@ -379,6 +394,7 @@ ZEND_METHOD(PyObject, offsetSet) {
 }
 
 ZEND_METHOD(PyObject, offsetUnset) {
+	LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
     PyObject_DelItem(object, pk);
@@ -386,6 +402,7 @@ ZEND_METHOD(PyObject, offsetUnset) {
 }
 
 ZEND_METHOD(PyObject, offsetExists) {
+	LOCK_GIL();
     auto pk = arg_1(INTERNAL_FUNCTION_PARAM_PASSTHRU);
     auto object = phpy_object_get_handle(ZEND_THIS);
     // The PyMapping_HasKey function always return 1, it not work
